@@ -1,0 +1,64 @@
+"""HTTP routes for the Qwen service."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+
+from qwen_service.config import Settings
+from qwen_service.engines.base import VisionLanguageEngine
+from qwen_service.schemas import (
+    AnalyzeRequest,
+    AnalyzeResponse,
+    HealthResponse,
+    MetadataResponse,
+)
+from qwen_service.service import AnalyzeInputError, QwenAnalyzeService
+
+router = APIRouter()
+
+
+def get_settings_from_app(request: Request) -> Settings:
+    return request.app.state.settings
+
+
+def get_engine_from_app(request: Request) -> VisionLanguageEngine:
+    return request.app.state.engine
+
+
+def get_service_from_app(request: Request) -> QwenAnalyzeService:
+    return request.app.state.analyze_service
+
+
+@router.get("/", response_model=MetadataResponse)
+async def metadata(settings: Settings = Depends(get_settings_from_app)) -> MetadataResponse:
+    return MetadataResponse(
+        service=settings.service_name,
+        model_id=settings.model_id,
+        backend=settings.backend,
+        endpoints=["GET /", "GET /health", "POST /analyze"],
+    )
+
+
+@router.get("/health", response_model=HealthResponse)
+async def health(
+    settings: Settings = Depends(get_settings_from_app),
+    engine: VisionLanguageEngine = Depends(get_engine_from_app),
+) -> HealthResponse:
+    return HealthResponse(
+        status="ok" if engine.ready else "starting",
+        ready=engine.ready,
+        model_id=settings.model_id,
+        backend=settings.backend,
+        device=engine.device,
+    )
+
+
+@router.post("/analyze", response_model=AnalyzeResponse)
+async def analyze(
+    payload: AnalyzeRequest,
+    service: QwenAnalyzeService = Depends(get_service_from_app),
+) -> AnalyzeResponse:
+    try:
+        return await service.analyze(payload)
+    except AnalyzeInputError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
