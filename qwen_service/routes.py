@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from qwen_service.config import Settings
@@ -15,6 +17,7 @@ from qwen_service.schemas import (
 from qwen_service.service import AnalyzeInputError, QwenAnalyzeService
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def get_settings_from_app(request: Request) -> Settings:
@@ -61,4 +64,5 @@ async def analyze(
     try:
         return await service.analyze(payload)
     except AnalyzeInputError as exc:
+        logger.warning("Analyze request rejected with HTTP 400: %s", exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
