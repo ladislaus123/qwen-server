@@ -65,7 +65,7 @@ def test_health_reports_starting_engine():
     assert response.json()["ready"] is False
 
 
-def test_analyze_returns_janus_compatible_response():
+def test_analyze_returns_local_processing_response():
     app = create_app(
         settings=Settings(model_id="fake-model"),
         engine=FakeEngine(),

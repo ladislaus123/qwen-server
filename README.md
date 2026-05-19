@@ -1,8 +1,12 @@
-# Qwen2.5-VL Local Service
+# Local Vision Model Service
 
-This service provides a Janus-compatible HTTP API backed by
-`Qwen/Qwen2.5-VL-7B-Instruct`. It is designed to run beside the telemetry app
-without modifying the telemetry repository.
+This service provides a small HTTP API for local ROI analysis backed by a
+Hugging Face vision-language model. The default model remains
+`Qwen/Qwen2.5-VL-7B-Instruct`, but the service can be pointed at other
+downloaded Hugging Face vision models through environment variables.
+
+The HTTP contract is intentionally simple and compatible with the telemetry
+app's local processing client.
 
 ## API
 
@@ -46,8 +50,8 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-The first run downloads `Qwen/Qwen2.5-VL-7B-Instruct`, so it can take a while
-and needs enough disk space for the model cache.
+The first run downloads the configured model, so it can take a while and needs
+enough disk space for the model cache.
 
 ## Run
 
@@ -60,8 +64,44 @@ The default URL is `http://localhost:6000`.
 To use this from the telemetry app, set:
 
 ```bash
-JANUS_SERVER_URL=http://localhost:6000
+LOCAL_PROCESSOR_URL=http://localhost:6000
 ```
+
+`JANUS_SERVER_URL` still works as a legacy telemetry fallback.
+
+## Model Selection
+
+Default Qwen2.5-VL path:
+
+```bash
+LOCAL_VISION_MODEL_ID=Qwen/Qwen2.5-VL-7B-Instruct
+LOCAL_VISION_MODEL_FAMILY=qwen2_5_vl
+```
+
+Generic Hugging Face chat-style vision model path:
+
+```bash
+LOCAL_VISION_MODEL_ID=llava-hf/llava-1.5-7b-hf
+LOCAL_VISION_MODEL_FAMILY=auto
+LOCAL_VISION_AUTO_MODEL_CLASS=auto_vision2seq
+```
+
+Many newer models work with:
+
+```bash
+LOCAL_VISION_MODEL_FAMILY=auto
+LOCAL_VISION_AUTO_MODEL_CLASS=auto_image_text_to_text
+```
+
+Some repositories require:
+
+```bash
+LOCAL_VISION_TRUST_REMOTE_CODE=true
+```
+
+The generic engine expects a chat-style vision-language model with a compatible
+`AutoProcessor`. Model families differ, so some Hugging Face models may still
+need a small model-specific engine.
 
 ## Health Check
 
@@ -93,17 +133,22 @@ PY
 
 All configuration comes from environment variables or `.env`.
 
-- `QWEN_MODEL_ID`: defaults to `Qwen/Qwen2.5-VL-7B-Instruct`
-- `QWEN_HOST`: defaults to `0.0.0.0`
-- `QWEN_PORT`: defaults to `6000`
-- `QWEN_DEVICE`: `auto`, `cuda`, `mps`, or `cpu`
-- `QWEN_LOAD_MODEL_ON_STARTUP`: load the model during FastAPI startup
-- `QWEN_DEFAULT_MAX_NEW_TOKENS`: default generation token count
-- `QWEN_MAX_NEW_TOKENS_LIMIT`: hard cap for request token counts
-- `QWEN_MAX_IMAGE_PIXELS`: maximum decoded image dimensions
-- `QWEN_MAX_IMAGE_BYTES`: maximum request image payload size
-- `QWEN_MIN_PIXELS` / `QWEN_MAX_PIXELS`: Qwen processor image resizing bounds
-- `QWEN_USE_FLASH_ATTENTION`: enable FlashAttention 2 on CUDA when installed
+- `LOCAL_VISION_MODEL_ID`: defaults to `Qwen/Qwen2.5-VL-7B-Instruct`
+- `LOCAL_VISION_MODEL_FAMILY`: `qwen2_5_vl` or `auto`
+- `LOCAL_VISION_AUTO_MODEL_CLASS`: `auto_image_text_to_text` or `auto_vision2seq`
+- `LOCAL_VISION_HOST`: defaults to `0.0.0.0`
+- `LOCAL_VISION_PORT`: defaults to `6000`
+- `LOCAL_VISION_DEVICE`: `auto`, `cuda`, `mps`, or `cpu`
+- `LOCAL_VISION_LOAD_MODEL_ON_STARTUP`: load the model during FastAPI startup
+- `LOCAL_VISION_TRUST_REMOTE_CODE`: allow model repos with custom code
+- `LOCAL_VISION_DEFAULT_MAX_NEW_TOKENS`: default generation token count
+- `LOCAL_VISION_MAX_NEW_TOKENS_LIMIT`: hard cap for request token counts
+- `LOCAL_VISION_MAX_IMAGE_PIXELS`: maximum decoded image dimensions
+- `LOCAL_VISION_MAX_IMAGE_BYTES`: maximum request image payload size
+- `LOCAL_VISION_MIN_PIXELS` / `LOCAL_VISION_MAX_PIXELS`: Qwen processor image resizing bounds
+- `LOCAL_VISION_USE_FLASH_ATTENTION`: enable FlashAttention 2 on CUDA when installed
+
+Legacy `QWEN_*` environment variables are still accepted as fallbacks.
 
 ## Tests
 

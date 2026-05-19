@@ -1,4 +1,4 @@
-"""Qwen2.5-VL local inference service."""
+"""Local Hugging Face vision-language inference service."""
 
 __all__ = ["__version__"]
 

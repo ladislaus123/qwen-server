@@ -8,7 +8,7 @@ from PIL import Image
 from qwen_service.config import Settings
 from qwen_service.engines.transformers_qwen import TransformersQwenEngine
 from qwen_service.schemas import AnalyzeRequest
-from qwen_service.service import QwenAnalyzeService
+from qwen_service.service import LocalVisionAnalyzeService
 
 
 def _png_base64():
@@ -30,7 +30,7 @@ def test_full_model_smoke():
         engine = TransformersQwenEngine(settings)
         await engine.load()
         try:
-            service = QwenAnalyzeService(engine=engine, settings=settings)
+            service = LocalVisionAnalyzeService(engine=engine, settings=settings)
             response = await service.analyze(
                 AnalyzeRequest(
                     image=_png_base64(),

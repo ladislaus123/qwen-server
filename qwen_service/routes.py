@@ -1,4 +1,4 @@
-"""HTTP routes for the Qwen service."""
+"""HTTP routes for the local vision model service."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from qwen_service.schemas import (
     HealthResponse,
     MetadataResponse,
 )
-from qwen_service.service import AnalyzeInputError, QwenAnalyzeService
+from qwen_service.service import AnalyzeInputError, LocalVisionAnalyzeService
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ def get_engine_from_app(request: Request) -> VisionLanguageEngine:
     return request.app.state.engine
 
 
-def get_service_from_app(request: Request) -> QwenAnalyzeService:
+def get_service_from_app(request: Request) -> LocalVisionAnalyzeService:
     return request.app.state.analyze_service
 
 
@@ -37,6 +37,7 @@ async def metadata(settings: Settings = Depends(get_settings_from_app)) -> Metad
     return MetadataResponse(
         service=settings.service_name,
         model_id=settings.model_id,
+        model_family=settings.model_family,
         backend=settings.backend,
         endpoints=["GET /", "GET /health", "POST /analyze"],
     )
@@ -51,6 +52,7 @@ async def health(
         status="ok" if engine.ready else "starting",
         ready=engine.ready,
         model_id=settings.model_id,
+        model_family=settings.model_family,
         backend=settings.backend,
         device=engine.device,
     )
@@ -59,7 +61,7 @@ async def health(
 @router.post("/analyze", response_model=AnalyzeResponse)
 async def analyze(
     payload: AnalyzeRequest,
-    service: QwenAnalyzeService = Depends(get_service_from_app),
+    service: LocalVisionAnalyzeService = Depends(get_service_from_app),
 ) -> AnalyzeResponse:
     try:
         return await service.analyze(payload)

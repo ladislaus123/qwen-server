@@ -11,10 +11,20 @@ from qwen_service import __version__
 from qwen_service.config import Settings, get_settings
 from qwen_service.engines.base import VisionLanguageEngine
 from qwen_service.engines.transformers_qwen import TransformersQwenEngine
+from qwen_service.engines.transformers_vision import TransformersVisionLanguageEngine
 from qwen_service.routes import router
-from qwen_service.service import QwenAnalyzeService
+from qwen_service.service import LocalVisionAnalyzeService
 
 logger = logging.getLogger(__name__)
+
+
+def create_default_engine(settings: Settings) -> VisionLanguageEngine:
+    """Create the configured Hugging Face vision-language engine."""
+    if settings.model_family == "qwen2_5_vl":
+        return TransformersQwenEngine(settings)
+    if settings.model_family == "auto":
+        return TransformersVisionLanguageEngine(settings)
+    raise ValueError(f"Unsupported model family: {settings.model_family}")
 
 
 def create_app(
@@ -25,7 +35,7 @@ def create_app(
 ) -> FastAPI:
     """Create the FastAPI app with injectable settings and engine for tests."""
     resolved_settings = settings or get_settings()
-    resolved_engine = engine or TransformersQwenEngine(resolved_settings)
+    resolved_engine = engine or create_default_engine(resolved_settings)
     should_load = (
         resolved_settings.load_model_on_startup
         if load_model_on_startup is None
@@ -38,12 +48,13 @@ def create_app(
     )
     logger.info(
         (
-            "Creating Qwen app service=%s model_id=%s backend=%s "
-            "device_policy=%s load_model_on_startup=%s log_level=%s"
+            "Creating local vision app service=%s model_id=%s backend=%s "
+            "model_family=%s device_policy=%s load_model_on_startup=%s log_level=%s"
         ),
         resolved_settings.service_name,
         resolved_settings.model_id,
         resolved_settings.backend,
+        resolved_settings.model_family,
         resolved_settings.device_policy,
         should_load,
         resolved_settings.log_level,
@@ -53,7 +64,7 @@ def create_app(
     async def lifespan(app: FastAPI):
         app.state.settings = resolved_settings
         app.state.engine = resolved_engine
-        app.state.analyze_service = QwenAnalyzeService(
+        app.state.analyze_service = LocalVisionAnalyzeService(
             engine=resolved_engine,
             settings=resolved_settings,
         )
@@ -76,13 +87,13 @@ def create_app(
         try:
             yield
         finally:
-            logger.info("Closing Qwen engine")
+            logger.info("Closing local vision engine")
             await resolved_engine.close()
-            logger.info("Qwen engine closed")
+            logger.info("Local vision engine closed")
 
     app = FastAPI(
-        title="Qwen2.5-VL Local Service",
-        description="Janus-compatible local ROI analysis service backed by Qwen2.5-VL.",
+        title="Local Vision Model Service",
+        description="Local ROI analysis service backed by a Hugging Face vision-language model.",
         version=__version__,
         lifespan=lifespan,
     )

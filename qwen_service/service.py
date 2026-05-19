@@ -19,7 +19,7 @@ class AnalyzeInputError(ValueError):
     """Raised for request data that should become HTTP 400."""
 
 
-class QwenAnalyzeService:
+class LocalVisionAnalyzeService:
     """Coordinates decoding, token capping, and model generation."""
 
     def __init__(self, engine: VisionLanguageEngine, settings: Settings):
@@ -145,3 +145,7 @@ class QwenAnalyzeService:
 
 def _elapsed_ms(started_at: float) -> float:
     return (time.perf_counter() - started_at) * 1000
+
+
+# Backward-compatible name for older tests/imports.
+QwenAnalyzeService = LocalVisionAnalyzeService

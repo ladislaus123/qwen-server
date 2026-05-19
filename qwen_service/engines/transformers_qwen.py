@@ -1,4 +1,4 @@
-"""Transformers-backed Qwen2.5-VL inference engine."""
+"""Qwen2.5-VL optimized Transformers inference engine."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class TransformersQwenEngine:
-    """Runs Qwen2.5-VL with Hugging Face Transformers."""
+    """Runs Qwen2.5-VL with its model-specific Transformers class."""
 
     def __init__(self, settings: Settings):
         self.settings = settings
@@ -56,10 +56,10 @@ class TransformersQwenEngine:
             model_kwargs["attn_implementation"] = "flash_attention_2"
 
         processor_kwargs: dict[str, Any] = {}
-        if self.settings.qwen_min_pixels is not None:
-            processor_kwargs["min_pixels"] = self.settings.qwen_min_pixels
-        if self.settings.qwen_max_pixels is not None:
-            processor_kwargs["max_pixels"] = self.settings.qwen_max_pixels
+        if self.settings.processor_min_pixels is not None:
+            processor_kwargs["min_pixels"] = self.settings.processor_min_pixels
+        if self.settings.processor_max_pixels is not None:
+            processor_kwargs["max_pixels"] = self.settings.processor_max_pixels
 
         logger.info("Loading %s on %s", self.model_id, device)
         self._processor = AutoProcessor.from_pretrained(self.model_id, **processor_kwargs)
@@ -85,12 +85,12 @@ class TransformersQwenEngine:
 
         if policy == "cuda":
             if not cuda_available:
-                raise RuntimeError("QWEN_DEVICE=cuda was requested, but CUDA is unavailable")
+                raise RuntimeError("LOCAL_VISION_DEVICE=cuda was requested, but CUDA is unavailable")
             return "cuda"
 
         if policy == "mps":
             if not mps_available:
-                raise RuntimeError("QWEN_DEVICE=mps was requested, but MPS is unavailable")
+                raise RuntimeError("LOCAL_VISION_DEVICE=mps was requested, but MPS is unavailable")
             return "mps"
 
         if policy == "cpu":

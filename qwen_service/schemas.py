@@ -21,6 +21,7 @@ class HealthResponse(BaseModel):
     status: str
     ready: bool
     model_id: str
+    model_family: str | None = None
     backend: str
     device: str | None = None
 
@@ -28,6 +29,7 @@ class HealthResponse(BaseModel):
 class MetadataResponse(BaseModel):
     service: str
     model_id: str
+    model_family: str | None = None
     backend: str
-    janus_compatible: bool = True
+    analyze_api_compatible: bool = True
     endpoints: list[str]

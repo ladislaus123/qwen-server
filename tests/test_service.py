@@ -7,7 +7,7 @@ import pytest
 
 from qwen_service.config import Settings
 from qwen_service.schemas import AnalyzeRequest
-from qwen_service.service import AnalyzeInputError, QwenAnalyzeService
+from qwen_service.service import AnalyzeInputError, LocalVisionAnalyzeService
 
 
 class FakeEngine:
@@ -39,7 +39,7 @@ def _png_base64():
 def test_service_calls_engine_with_decoded_image_and_capped_tokens():
     engine = FakeEngine()
     settings = Settings(default_max_new_tokens=100, max_new_tokens_limit=128)
-    service = QwenAnalyzeService(engine=engine, settings=settings)
+    service = LocalVisionAnalyzeService(engine=engine, settings=settings)
 
     response = asyncio.run(
         service.analyze(
@@ -58,7 +58,7 @@ def test_service_calls_engine_with_decoded_image_and_capped_tokens():
 
 def test_service_raises_input_error_for_bad_image():
     engine = FakeEngine()
-    service = QwenAnalyzeService(engine=engine, settings=Settings())
+    service = LocalVisionAnalyzeService(engine=engine, settings=Settings())
 
     with pytest.raises(AnalyzeInputError):
         asyncio.run(service.analyze(AnalyzeRequest(image="bad", prompt="read")))

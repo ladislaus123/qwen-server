@@ -1,4 +1,4 @@
-"""Runnable entrypoint for the Qwen service."""
+"""Runnable entrypoint for the local vision model service."""
 
 from qwen_service.config import get_settings
 from qwen_service.main import app
