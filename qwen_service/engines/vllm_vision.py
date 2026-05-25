@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
+import os
 from typing import Any
 from uuid import uuid4
 
@@ -44,6 +45,8 @@ class VllmVisionLanguageEngine:
         await self._load()
 
     async def _load(self) -> None:
+        self._configure_vllm_environment()
+
         try:
             from transformers import AutoProcessor
             AsyncEngineArgs, AsyncLLMEngine = _import_vllm_async_engine()
@@ -60,11 +63,16 @@ class VllmVisionLanguageEngine:
             "trust_remote_code": self.settings.trust_remote_code,
             "limit_mm_per_prompt": {"image": 1},
             "max_num_seqs": self.settings.vllm_max_num_seqs,
+            "gpu_memory_utilization": self.settings.vllm_gpu_memory_utilization,
         }
         self._apply_device_policy(engine_kwargs)
 
         if self.settings.vllm_max_model_len is not None:
             engine_kwargs["max_model_len"] = self.settings.vllm_max_model_len
+        if self.settings.vllm_dtype is not None:
+            engine_kwargs["dtype"] = self.settings.vllm_dtype
+        if self.settings.vllm_quantization is not None:
+            engine_kwargs["quantization"] = self.settings.vllm_quantization
         if self.settings.vllm_tensor_parallel_size > 1:
             engine_kwargs["tensor_parallel_size"] = self.settings.vllm_tensor_parallel_size
 
@@ -72,17 +80,18 @@ class VllmVisionLanguageEngine:
         if mm_processor_kwargs:
             engine_kwargs["mm_processor_kwargs"] = mm_processor_kwargs
 
+        filtered_engine_kwargs = _filter_engine_args(AsyncEngineArgs, engine_kwargs)
         logger.info(
             "Loading %s with vLLM args=%s",
             self.model_id,
-            _safe_log_kwargs(engine_kwargs),
+            _safe_log_kwargs(filtered_engine_kwargs),
         )
         self._processor = await asyncio.to_thread(
             AutoProcessor.from_pretrained,
             self.model_id,
             **processor_kwargs,
         )
-        engine_args = AsyncEngineArgs(**engine_kwargs)
+        engine_args = AsyncEngineArgs(**filtered_engine_kwargs)
         try:
             self._llm = AsyncLLMEngine.from_engine_args(engine_args)
         except RuntimeError as exc:
@@ -105,6 +114,15 @@ class VllmVisionLanguageEngine:
             )
 
         engine_kwargs["device"] = policy
+
+    def _configure_vllm_environment(self) -> None:
+        policy = self.settings.device_policy
+        if policy == "auto":
+            return
+        if policy == "mps":
+            return
+
+        os.environ.setdefault("VLLM_TARGET_DEVICE", policy)
 
     def _mm_processor_kwargs(self) -> dict[str, Any]:
         kwargs: dict[str, Any] = {}
@@ -249,6 +267,40 @@ def _safe_log_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _filter_engine_args(engine_args_class: Any, kwargs: dict[str, Any]) -> dict[str, Any]:
+    try:
+        signature = inspect.signature(engine_args_class)
+    except (TypeError, ValueError):
+        return kwargs
+
+    parameters = signature.parameters.values()
+    if any(parameter.kind is inspect.Parameter.VAR_KEYWORD for parameter in parameters):
+        return kwargs
+
+    supported_names = {
+        parameter.name
+        for parameter in signature.parameters.values()
+        if parameter.kind
+        in {
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.KEYWORD_ONLY,
+        }
+    }
+    filtered = {
+        key: value
+        for key, value in kwargs.items()
+        if key in supported_names
+    }
+    dropped = sorted(set(kwargs) - set(filtered))
+    if dropped:
+        logger.info(
+            "Installed vLLM AsyncEngineArgs does not accept args=%s; relying on "
+            "vLLM env/defaults for those settings",
+            dropped,
+        )
+    return filtered
+
+
 def _is_vllm_device_detection_error(exc: RuntimeError) -> bool:
     message = str(exc)
     return (
@@ -259,17 +311,17 @@ def _is_vllm_device_detection_error(exc: RuntimeError) -> bool:
 
 def _vllm_device_help_message() -> str:
     diagnostics = _collect_torch_device_diagnostics()
+    vllm_diagnostics = _collect_vllm_platform_diagnostics()
     return (
         "vLLM could not infer a runtime device. This usually means CUDA is not "
-        "visible to this Python environment, for example because PyTorch is a "
-        "CPU-only build, the NVIDIA driver/container runtime is unavailable, or "
-        "vLLM was installed for an unsupported platform. "
-        f"Diagnostics: {diagnostics}. "
-        "Check `nvidia-smi` and "
-        "`python -c \"import torch; print(torch.__version__, torch.version.cuda, "
-        "torch.cuda.is_available(), torch.cuda.device_count())\"`. "
-        "If CUDA is available but vLLM auto-detection still fails, set "
-        "`LOCAL_VISION_DEVICE=cuda` so this service passes `device='cuda'` to vLLM."
+        "visible to vLLM's platform detector, even if PyTorch can see CUDA. "
+        "Common causes are a CPU/empty vLLM build, NVML failing inside the "
+        "process, or vLLM being imported before its target-device env is set. "
+        f"Torch diagnostics: {diagnostics}. "
+        f"vLLM diagnostics: {vllm_diagnostics}. "
+        "Run with `VLLM_LOGGING_LEVEL=DEBUG` and check that vLLM logs "
+        "`Automatically detected platform cuda`. If it still reports an empty "
+        "or unspecified platform, reinstall a CUDA vLLM wheel in this venv."
     )
 
 
@@ -285,6 +337,23 @@ def _collect_torch_device_diagnostics() -> str:
         )
     except Exception as exc:
         return f"unable to import torch diagnostics: {exc}"
+
+
+def _collect_vllm_platform_diagnostics() -> str:
+    try:
+        import vllm
+        from vllm.platforms import current_platform
+
+        platform_name = current_platform.__class__.__name__
+        device_type = getattr(current_platform, "device_type", None)
+        target_device = os.environ.get("VLLM_TARGET_DEVICE")
+        return (
+            f"vllm={getattr(vllm, '__version__', 'unknown')}, "
+            f"platform={platform_name}, device_type={device_type!r}, "
+            f"VLLM_TARGET_DEVICE={target_device!r}"
+        )
+    except Exception as exc:
+        return f"unable to collect vLLM diagnostics: {exc}"
 
 
 def _import_vllm_async_engine() -> tuple[Any, Any]:

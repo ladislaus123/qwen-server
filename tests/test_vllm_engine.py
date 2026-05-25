@@ -1,4 +1,5 @@
 import asyncio
+import os
 import sys
 import types
 from types import SimpleNamespace
@@ -117,6 +118,9 @@ def test_vllm_engine_loads_async_engine_args(fake_vllm_modules):
             vllm_max_num_seqs=8,
             vllm_max_concurrent_requests=3,
             vllm_tensor_parallel_size=2,
+            vllm_gpu_memory_utilization=0.7,
+            vllm_dtype="float16",
+            vllm_quantization="bitsandbytes",
         )
         engine = VllmVisionLanguageEngine(settings)
 
@@ -131,7 +135,10 @@ def test_vllm_engine_loads_async_engine_args(fake_vllm_modules):
             "trust_remote_code": True,
             "limit_mm_per_prompt": {"image": 1},
             "max_num_seqs": 8,
+            "gpu_memory_utilization": 0.7,
             "max_model_len": 1024,
+            "dtype": "float16",
+            "quantization": "bitsandbytes",
             "tensor_parallel_size": 2,
             "mm_processor_kwargs": {
                 "min_pixels": 11,
@@ -154,6 +161,23 @@ def test_vllm_engine_honors_cuda_device_policy(fake_vllm_modules):
         await engine.load()
 
         assert fake_vllm_modules.engine_args.kwargs["device"] == "cuda"
+
+        await engine.close()
+
+    asyncio.run(run())
+
+
+def test_vllm_engine_sets_target_device_before_import(monkeypatch, fake_vllm_modules):
+    async def run():
+        monkeypatch.delenv("VLLM_TARGET_DEVICE", raising=False)
+        engine = VllmVisionLanguageEngine(
+            Settings(backend="vllm", device_policy="cuda")
+        )
+
+        await engine.load()
+
+        assert fake_vllm_modules.engine_args.kwargs["device"] == "cuda"
+        assert os.environ["VLLM_TARGET_DEVICE"] == "cuda"
 
         await engine.close()
 

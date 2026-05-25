@@ -71,6 +71,31 @@ def _get_optional_int(
     return value
 
 
+def _get_float(names: tuple[str, ...], default: float, minimum: float | None = None) -> float:
+    raw_value = _first_env(*names)
+    if raw_value is None or raw_value.strip() == "":
+        return default
+
+    try:
+        value = float(raw_value)
+    except ValueError as exc:
+        raise ValueError(f"{names[0]} must be a number") from exc
+
+    if minimum is not None and value < minimum:
+        raise ValueError(f"{names[0]} must be >= {minimum}")
+    return value
+
+
+def _get_optional_str(names: tuple[str, ...], default: str | None = None) -> str | None:
+    value = _first_env(*names)
+    if value is None:
+        return default
+    value = value.strip()
+    if value == "" or value.lower() in {"none", "null"}:
+        return None
+    return value
+
+
 @dataclass(frozen=True)
 class Settings:
     """Runtime configuration loaded from environment variables."""
@@ -101,6 +126,9 @@ class Settings:
     vllm_max_num_seqs: int = 8
     vllm_max_concurrent_requests: int = 8
     vllm_tensor_parallel_size: int = 1
+    vllm_gpu_memory_utilization: float = 0.85
+    vllm_dtype: str | None = "auto"
+    vllm_quantization: str | None = None
 
     log_level: str = "info"
 
@@ -198,6 +226,22 @@ def get_settings() -> Settings:
             ),
             1,
             minimum=1,
+        ),
+        vllm_gpu_memory_utilization=_get_float(
+            (
+                "LOCAL_VISION_VLLM_GPU_MEMORY_UTILIZATION",
+                "QWEN_VLLM_GPU_MEMORY_UTILIZATION",
+            ),
+            0.85,
+            minimum=0.01,
+        ),
+        vllm_dtype=_get_optional_str(
+            ("LOCAL_VISION_VLLM_DTYPE", "QWEN_VLLM_DTYPE"),
+            "auto",
+        ),
+        vllm_quantization=_get_optional_str(
+            ("LOCAL_VISION_VLLM_QUANTIZATION", "QWEN_VLLM_QUANTIZATION"),
+            None,
         ),
         log_level=_get_str(("LOCAL_VISION_LOG_LEVEL", "QWEN_LOG_LEVEL"), "info"),
     )

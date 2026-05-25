@@ -119,6 +119,9 @@ LOCAL_VISION_VLLM_MAX_MODEL_LEN=4096
 LOCAL_VISION_VLLM_MAX_NUM_SEQS=8
 LOCAL_VISION_VLLM_MAX_CONCURRENT_REQUESTS=8
 LOCAL_VISION_VLLM_TENSOR_PARALLEL_SIZE=1
+LOCAL_VISION_VLLM_GPU_MEMORY_UTILIZATION=0.85
+LOCAL_VISION_VLLM_DTYPE=auto
+LOCAL_VISION_VLLM_QUANTIZATION=
 ```
 
 Then restart the service with:
@@ -136,6 +139,19 @@ If vLLM fails during startup with `Device string must not be empty`, CUDA is not
 visible to vLLM or vLLM failed automatic platform detection. Confirm `nvidia-smi`
 works and that `torch.cuda.is_available()` is `True`; keep
 `LOCAL_VISION_DEVICE=cuda` to force the vLLM engine device.
+
+For a 16 GB GPU, first ensure no old model process is still holding VRAM. If the
+model still does not fit, start with:
+
+```bash
+LOCAL_VISION_VLLM_MAX_NUM_SEQS=1
+LOCAL_VISION_VLLM_MAX_CONCURRENT_REQUESTS=1
+LOCAL_VISION_VLLM_MAX_MODEL_LEN=2048
+LOCAL_VISION_VLLM_GPU_MEMORY_UTILIZATION=0.70
+LOCAL_VISION_MAX_PIXELS=401408
+```
+
+Then raise concurrency only after the model loads successfully.
 
 vLLM is loaded lazily by the vLLM backend, so the regular Transformers install
 and test suite do not require it.
@@ -189,6 +205,9 @@ All configuration comes from environment variables or `.env`.
 - `LOCAL_VISION_VLLM_MAX_NUM_SEQS`: vLLM maximum concurrent sequences
 - `LOCAL_VISION_VLLM_MAX_CONCURRENT_REQUESTS`: maximum `/analyze` requests admitted to vLLM at once
 - `LOCAL_VISION_VLLM_TENSOR_PARALLEL_SIZE`: vLLM tensor parallel size
+- `LOCAL_VISION_VLLM_GPU_MEMORY_UTILIZATION`: fraction of GPU memory vLLM may reserve
+- `LOCAL_VISION_VLLM_DTYPE`: vLLM model dtype, for example `auto`, `float16`, or `bfloat16`
+- `LOCAL_VISION_VLLM_QUANTIZATION`: optional vLLM quantization mode, or blank/`none`
 
 Legacy `QWEN_*` environment variables are still accepted as fallbacks.
 
