@@ -25,6 +25,7 @@ def test_default_vllm_concurrency_settings_are_conservative():
     assert settings.vllm_max_num_seqs == 8
     assert settings.vllm_max_concurrent_requests == 8
     assert settings.vllm_gpu_memory_utilization == 0.85
+    assert settings.vllm_cpu_offload_gb == 0.0
 
 
 def test_local_vision_env_names_are_preferred(monkeypatch):
@@ -48,6 +49,7 @@ def test_vllm_settings_are_loaded(monkeypatch):
     monkeypatch.setenv("LOCAL_VISION_VLLM_MAX_CONCURRENT_REQUESTS", "3")
     monkeypatch.setenv("LOCAL_VISION_VLLM_TENSOR_PARALLEL_SIZE", "4")
     monkeypatch.setenv("LOCAL_VISION_VLLM_GPU_MEMORY_UTILIZATION", "0.7")
+    monkeypatch.setenv("LOCAL_VISION_VLLM_CPU_OFFLOAD_GB", "4")
     monkeypatch.setenv("LOCAL_VISION_VLLM_DTYPE", "float16")
     monkeypatch.setenv("LOCAL_VISION_VLLM_QUANTIZATION", "bitsandbytes")
 
@@ -59,6 +61,7 @@ def test_vllm_settings_are_loaded(monkeypatch):
     assert settings.vllm_max_concurrent_requests == 3
     assert settings.vllm_tensor_parallel_size == 4
     assert settings.vllm_gpu_memory_utilization == 0.7
+    assert settings.vllm_cpu_offload_gb == 4.0
     assert settings.vllm_dtype == "float16"
     assert settings.vllm_quantization == "bitsandbytes"
     get_settings.cache_clear()

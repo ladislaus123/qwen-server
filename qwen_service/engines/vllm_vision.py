@@ -75,6 +75,8 @@ class VllmVisionLanguageEngine:
             engine_kwargs["quantization"] = self.settings.vllm_quantization
         if self.settings.vllm_tensor_parallel_size > 1:
             engine_kwargs["tensor_parallel_size"] = self.settings.vllm_tensor_parallel_size
+        if self.settings.vllm_cpu_offload_gb > 0:
+            engine_kwargs["cpu_offload_gb"] = self.settings.vllm_cpu_offload_gb
 
         mm_processor_kwargs = self._mm_processor_kwargs()
         if mm_processor_kwargs:

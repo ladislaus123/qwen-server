@@ -119,6 +119,7 @@ def test_vllm_engine_loads_async_engine_args(fake_vllm_modules):
             vllm_max_concurrent_requests=3,
             vllm_tensor_parallel_size=2,
             vllm_gpu_memory_utilization=0.7,
+            vllm_cpu_offload_gb=4,
             vllm_dtype="float16",
             vllm_quantization="bitsandbytes",
         )
@@ -136,6 +137,7 @@ def test_vllm_engine_loads_async_engine_args(fake_vllm_modules):
             "limit_mm_per_prompt": {"image": 1},
             "max_num_seqs": 8,
             "gpu_memory_utilization": 0.7,
+            "cpu_offload_gb": 4,
             "max_model_len": 1024,
             "dtype": "float16",
             "quantization": "bitsandbytes",

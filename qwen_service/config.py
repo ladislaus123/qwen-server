@@ -127,6 +127,7 @@ class Settings:
     vllm_max_concurrent_requests: int = 8
     vllm_tensor_parallel_size: int = 1
     vllm_gpu_memory_utilization: float = 0.85
+    vllm_cpu_offload_gb: float = 0.0
     vllm_dtype: str | None = "auto"
     vllm_quantization: str | None = None
 
@@ -234,6 +235,14 @@ def get_settings() -> Settings:
             ),
             0.85,
             minimum=0.01,
+        ),
+        vllm_cpu_offload_gb=_get_float(
+            (
+                "LOCAL_VISION_VLLM_CPU_OFFLOAD_GB",
+                "QWEN_VLLM_CPU_OFFLOAD_GB",
+            ),
+            0.0,
+            minimum=0.0,
         ),
         vllm_dtype=_get_optional_str(
             ("LOCAL_VISION_VLLM_DTYPE", "QWEN_VLLM_DTYPE"),
