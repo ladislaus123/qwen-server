@@ -145,6 +145,21 @@ def test_vllm_engine_loads_async_engine_args(fake_vllm_modules):
     asyncio.run(run())
 
 
+def test_vllm_engine_honors_cuda_device_policy(fake_vllm_modules):
+    async def run():
+        engine = VllmVisionLanguageEngine(
+            Settings(backend="vllm", device_policy="cuda")
+        )
+
+        await engine.load()
+
+        assert fake_vllm_modules.engine_args.kwargs["device"] == "cuda"
+
+        await engine.close()
+
+    asyncio.run(run())
+
+
 def test_vllm_engine_generate_uses_multimodal_prompt_and_final_output(
     fake_vllm_modules,
 ):

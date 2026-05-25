@@ -61,6 +61,7 @@ class VllmVisionLanguageEngine:
             "limit_mm_per_prompt": {"image": 1},
             "max_num_seqs": self.settings.vllm_max_num_seqs,
         }
+        self._apply_device_policy(engine_kwargs)
 
         if self.settings.vllm_max_model_len is not None:
             engine_kwargs["max_model_len"] = self.settings.vllm_max_model_len
@@ -82,10 +83,28 @@ class VllmVisionLanguageEngine:
             **processor_kwargs,
         )
         engine_args = AsyncEngineArgs(**engine_kwargs)
-        self._llm = AsyncLLMEngine.from_engine_args(engine_args)
+        try:
+            self._llm = AsyncLLMEngine.from_engine_args(engine_args)
+        except RuntimeError as exc:
+            if _is_vllm_device_detection_error(exc):
+                raise RuntimeError(_vllm_device_help_message()) from exc
+            raise
         self._device = "vllm"
         self._ready = True
         logger.info("vLLM model ready")
+
+    def _apply_device_policy(self, engine_kwargs: dict[str, Any]) -> None:
+        policy = self.settings.device_policy
+        if policy == "auto":
+            return
+        if policy == "mps":
+            raise RuntimeError(
+                "LOCAL_VISION_BACKEND=vllm does not support LOCAL_VISION_DEVICE=mps. "
+                "Use LOCAL_VISION_DEVICE=cuda for vLLM, or switch back to "
+                "LOCAL_VISION_BACKEND=transformers for MPS."
+            )
+
+        engine_kwargs["device"] = policy
 
     def _mm_processor_kwargs(self) -> dict[str, Any]:
         kwargs: dict[str, Any] = {}
@@ -228,6 +247,44 @@ def _safe_log_kwargs(kwargs: dict[str, Any]) -> dict[str, Any]:
         for key, value in kwargs.items()
         if key not in {"hf_token", "token"}
     }
+
+
+def _is_vllm_device_detection_error(exc: RuntimeError) -> bool:
+    message = str(exc)
+    return (
+        "Device string must not be empty" in message
+        or "Failed to infer device type" in message
+    )
+
+
+def _vllm_device_help_message() -> str:
+    diagnostics = _collect_torch_device_diagnostics()
+    return (
+        "vLLM could not infer a runtime device. This usually means CUDA is not "
+        "visible to this Python environment, for example because PyTorch is a "
+        "CPU-only build, the NVIDIA driver/container runtime is unavailable, or "
+        "vLLM was installed for an unsupported platform. "
+        f"Diagnostics: {diagnostics}. "
+        "Check `nvidia-smi` and "
+        "`python -c \"import torch; print(torch.__version__, torch.version.cuda, "
+        "torch.cuda.is_available(), torch.cuda.device_count())\"`. "
+        "If CUDA is available but vLLM auto-detection still fails, set "
+        "`LOCAL_VISION_DEVICE=cuda` so this service passes `device='cuda'` to vLLM."
+    )
+
+
+def _collect_torch_device_diagnostics() -> str:
+    try:
+        import torch
+
+        cuda_available = torch.cuda.is_available()
+        device_count = torch.cuda.device_count() if cuda_available else 0
+        return (
+            f"torch={torch.__version__}, torch_cuda={torch.version.cuda}, "
+            f"cuda_available={cuda_available}, cuda_device_count={device_count}"
+        )
+    except Exception as exc:
+        return f"unable to import torch diagnostics: {exc}"
 
 
 def _import_vllm_async_engine() -> tuple[Any, Any]:

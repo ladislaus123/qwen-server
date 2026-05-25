@@ -112,6 +112,7 @@ vLLM, install vLLM and change the backend in `.env`:
 pip install vllm
 
 LOCAL_VISION_BACKEND=vllm
+LOCAL_VISION_DEVICE=cuda
 LOCAL_VISION_MODEL_ID=Qwen/Qwen2.5-VL-7B-Instruct
 LOCAL_VISION_MODEL_FAMILY=qwen2_5_vl
 LOCAL_VISION_VLLM_MAX_MODEL_LEN=4096
@@ -130,6 +131,11 @@ The HTTP API stays the same. vLLM schedules concurrent `/analyze` requests
 internally, so throughput improves when clients send multiple requests at the
 same time. A client that sends one request and waits before sending the next one
 will still be processed sequentially from the service's point of view.
+
+If vLLM fails during startup with `Device string must not be empty`, CUDA is not
+visible to vLLM or vLLM failed automatic platform detection. Confirm `nvidia-smi`
+works and that `torch.cuda.is_available()` is `True`; keep
+`LOCAL_VISION_DEVICE=cuda` to force the vLLM engine device.
 
 vLLM is loaded lazily by the vLLM backend, so the regular Transformers install
 and test suite do not require it.
