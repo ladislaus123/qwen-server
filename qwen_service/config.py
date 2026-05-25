@@ -131,6 +131,7 @@ class Settings:
     vllm_dtype: str | None = "auto"
     vllm_quantization: str | None = None
     vllm_attention_backend: str | None = None
+    vllm_use_flashinfer_sampler: str | None = None
 
     log_level: str = "info"
 
@@ -258,6 +259,14 @@ def get_settings() -> Settings:
                 "LOCAL_VISION_VLLM_ATTENTION_BACKEND",
                 "QWEN_VLLM_ATTENTION_BACKEND",
                 "VLLM_ATTENTION_BACKEND",
+            ),
+            None,
+        ),
+        vllm_use_flashinfer_sampler=_get_optional_str(
+            (
+                "LOCAL_VISION_VLLM_USE_FLASHINFER_SAMPLER",
+                "QWEN_VLLM_USE_FLASHINFER_SAMPLER",
+                "VLLM_USE_FLASHINFER_SAMPLER",
             ),
             None,
         ),

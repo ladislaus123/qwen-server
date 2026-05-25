@@ -27,6 +27,7 @@ def test_default_vllm_concurrency_settings_are_conservative():
     assert settings.vllm_gpu_memory_utilization == 0.85
     assert settings.vllm_cpu_offload_gb == 0.0
     assert settings.vllm_attention_backend is None
+    assert settings.vllm_use_flashinfer_sampler is None
 
 
 def test_local_vision_env_names_are_preferred(monkeypatch):
@@ -54,6 +55,7 @@ def test_vllm_settings_are_loaded(monkeypatch):
     monkeypatch.setenv("LOCAL_VISION_VLLM_DTYPE", "float16")
     monkeypatch.setenv("LOCAL_VISION_VLLM_QUANTIZATION", "bitsandbytes")
     monkeypatch.setenv("LOCAL_VISION_VLLM_ATTENTION_BACKEND", "XFORMERS")
+    monkeypatch.setenv("LOCAL_VISION_VLLM_USE_FLASHINFER_SAMPLER", "0")
 
     settings = get_settings()
 
@@ -67,6 +69,7 @@ def test_vllm_settings_are_loaded(monkeypatch):
     assert settings.vllm_dtype == "float16"
     assert settings.vllm_quantization == "bitsandbytes"
     assert settings.vllm_attention_backend == "XFORMERS"
+    assert settings.vllm_use_flashinfer_sampler == "0"
     get_settings.cache_clear()
 
 

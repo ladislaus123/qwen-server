@@ -123,6 +123,11 @@ class VllmVisionLanguageEngine:
                 "VLLM_ATTENTION_BACKEND",
                 self.settings.vllm_attention_backend,
             )
+        if self.settings.vllm_use_flashinfer_sampler is not None:
+            os.environ.setdefault(
+                "VLLM_USE_FLASHINFER_SAMPLER",
+                self.settings.vllm_use_flashinfer_sampler,
+            )
 
         policy = self.settings.device_policy
         if policy == "auto":

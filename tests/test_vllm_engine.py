@@ -173,11 +173,13 @@ def test_vllm_engine_sets_target_device_before_import(monkeypatch, fake_vllm_mod
     async def run():
         monkeypatch.delenv("VLLM_TARGET_DEVICE", raising=False)
         monkeypatch.delenv("VLLM_ATTENTION_BACKEND", raising=False)
+        monkeypatch.delenv("VLLM_USE_FLASHINFER_SAMPLER", raising=False)
         engine = VllmVisionLanguageEngine(
             Settings(
                 backend="vllm",
                 device_policy="cuda",
                 vllm_attention_backend="XFORMERS",
+                vllm_use_flashinfer_sampler="0",
             )
         )
 
@@ -186,6 +188,7 @@ def test_vllm_engine_sets_target_device_before_import(monkeypatch, fake_vllm_mod
         assert fake_vllm_modules.engine_args.kwargs["device"] == "cuda"
         assert os.environ["VLLM_TARGET_DEVICE"] == "cuda"
         assert os.environ["VLLM_ATTENTION_BACKEND"] == "XFORMERS"
+        assert os.environ["VLLM_USE_FLASHINFER_SAMPLER"] == "0"
 
         await engine.close()
 

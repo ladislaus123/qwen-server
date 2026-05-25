@@ -124,6 +124,7 @@ LOCAL_VISION_VLLM_CPU_OFFLOAD_GB=0
 LOCAL_VISION_VLLM_DTYPE=auto
 LOCAL_VISION_VLLM_QUANTIZATION=
 LOCAL_VISION_VLLM_ATTENTION_BACKEND=
+LOCAL_VISION_VLLM_USE_FLASHINFER_SAMPLER=
 ```
 
 Then restart the service with:
@@ -152,6 +153,7 @@ LOCAL_VISION_VLLM_MAX_MODEL_LEN=2048
 LOCAL_VISION_VLLM_GPU_MEMORY_UTILIZATION=0.70
 LOCAL_VISION_VLLM_CPU_OFFLOAD_GB=4
 LOCAL_VISION_VLLM_ATTENTION_BACKEND=XFORMERS
+LOCAL_VISION_VLLM_USE_FLASHINFER_SAMPLER=0
 LOCAL_VISION_MAX_PIXELS=401408
 ```
 
@@ -214,6 +216,7 @@ All configuration comes from environment variables or `.env`.
 - `LOCAL_VISION_VLLM_DTYPE`: vLLM model dtype, for example `auto`, `float16`, or `bfloat16`
 - `LOCAL_VISION_VLLM_QUANTIZATION`: optional vLLM quantization mode, or blank/`none`
 - `LOCAL_VISION_VLLM_ATTENTION_BACKEND`: optional vLLM attention backend, for example `XFORMERS` or `TORCH_SDPA`
+- `LOCAL_VISION_VLLM_USE_FLASHINFER_SAMPLER`: set `0` to disable the FlashInfer sampler on older GPUs
 
 Legacy `QWEN_*` environment variables are still accepted as fallbacks.
 
