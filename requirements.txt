@@ -9,6 +9,9 @@ accelerate>=0.27.0
 transformers>=4.49.0
 qwen-vl-utils>=0.0.8
 
+# Optional vLLM backend:
+# pip install vllm
+
 # Test support
 pytest>=8.0.0
 httpx>=0.26.0

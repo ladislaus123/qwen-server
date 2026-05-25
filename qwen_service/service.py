@@ -87,37 +87,39 @@ class LocalVisionAnalyzeService:
             )
 
         try:
-            logger.info(
-                (
-                    "Analyze request %s waiting for inference lock "
-                    "engine_ready=%s device=%s"
-                ),
-                request_id,
-                self.engine.ready,
-                self.engine.device,
-            )
-            async with self._inference_lock:
+            if self.settings.backend.lower() == "vllm":
                 logger.info(
                     (
-                        "Analyze request %s sending image to model "
-                        "size=%sx%s prompt_chars=%d max_new_tokens=%d"
+                        "Analyze request %s using concurrent vLLM inference "
+                        "engine_ready=%s device=%s"
                     ),
                     request_id,
-                    image.width,
-                    image.height,
-                    len(prompt),
-                    max_new_tokens,
+                    self.engine.ready,
+                    self.engine.device,
                 )
-                result = await self.engine.generate(
+                result = await self._generate(
+                    request_id=request_id,
                     image=image,
                     prompt=prompt,
                     max_new_tokens=max_new_tokens,
                 )
+            else:
                 logger.info(
-                    "Analyze request %s model processed image result_chars=%d",
+                    (
+                        "Analyze request %s waiting for inference lock "
+                        "engine_ready=%s device=%s"
+                    ),
                     request_id,
-                    len(result),
+                    self.engine.ready,
+                    self.engine.device,
                 )
+                async with self._inference_lock:
+                    result = await self._generate(
+                        request_id=request_id,
+                        image=image,
+                        prompt=prompt,
+                        max_new_tokens=max_new_tokens,
+                    )
 
             stripped_result = result.strip()
             logger.info(
@@ -141,6 +143,37 @@ class LocalVisionAnalyzeService:
                 _elapsed_ms(started_at),
             )
             return AnalyzeResponse(success=False, error=error)
+
+    async def _generate(
+        self,
+        *,
+        request_id: str,
+        image,
+        prompt: str,
+        max_new_tokens: int,
+    ) -> str:
+        logger.info(
+            (
+                "Analyze request %s sending image to model "
+                "size=%sx%s prompt_chars=%d max_new_tokens=%d"
+            ),
+            request_id,
+            image.width,
+            image.height,
+            len(prompt),
+            max_new_tokens,
+        )
+        result = await self.engine.generate(
+            image=image,
+            prompt=prompt,
+            max_new_tokens=max_new_tokens,
+        )
+        logger.info(
+            "Analyze request %s model processed image result_chars=%d",
+            request_id,
+            len(result),
+        )
+        return result
 
 
 def _elapsed_ms(started_at: float) -> float:

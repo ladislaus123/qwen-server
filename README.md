@@ -1,7 +1,7 @@
 # Local Vision Model Service
 
 This service provides a small HTTP API for local ROI analysis backed by a
-Hugging Face vision-language model. The default model remains
+local vision-language model. The default model remains
 `Qwen/Qwen2.5-VL-7B-Instruct`, but the service can be pointed at other
 downloaded Hugging Face vision models through environment variables.
 
@@ -103,6 +103,37 @@ The generic engine expects a chat-style vision-language model with a compatible
 `AutoProcessor`. Model families differ, so some Hugging Face models may still
 need a small model-specific engine.
 
+## vLLM Backend
+
+The default backend is Transformers. To run the same `/analyze` route through
+vLLM, install vLLM and change the backend in `.env`:
+
+```bash
+pip install vllm
+
+LOCAL_VISION_BACKEND=vllm
+LOCAL_VISION_MODEL_ID=Qwen/Qwen2.5-VL-7B-Instruct
+LOCAL_VISION_MODEL_FAMILY=qwen2_5_vl
+LOCAL_VISION_VLLM_MAX_MODEL_LEN=4096
+LOCAL_VISION_VLLM_MAX_NUM_SEQS=8
+LOCAL_VISION_VLLM_MAX_CONCURRENT_REQUESTS=8
+LOCAL_VISION_VLLM_TENSOR_PARALLEL_SIZE=1
+```
+
+Then restart the service with:
+
+```bash
+python server.py
+```
+
+The HTTP API stays the same. vLLM schedules concurrent `/analyze` requests
+internally, so throughput improves when clients send multiple requests at the
+same time. A client that sends one request and waits before sending the next one
+will still be processed sequentially from the service's point of view.
+
+vLLM is loaded lazily by the vLLM backend, so the regular Transformers install
+and test suite do not require it.
+
 ## Health Check
 
 ```bash
@@ -136,6 +167,7 @@ All configuration comes from environment variables or `.env`.
 - `LOCAL_VISION_MODEL_ID`: defaults to `Qwen/Qwen2.5-VL-7B-Instruct`
 - `LOCAL_VISION_MODEL_FAMILY`: `qwen2_5_vl` or `auto`
 - `LOCAL_VISION_AUTO_MODEL_CLASS`: `auto_image_text_to_text` or `auto_vision2seq`
+- `LOCAL_VISION_BACKEND`: `transformers` or `vllm`
 - `LOCAL_VISION_HOST`: defaults to `0.0.0.0`
 - `LOCAL_VISION_PORT`: defaults to `6000`
 - `LOCAL_VISION_DEVICE`: `auto`, `cuda`, `mps`, or `cpu`
@@ -147,6 +179,10 @@ All configuration comes from environment variables or `.env`.
 - `LOCAL_VISION_MAX_IMAGE_BYTES`: maximum request image payload size
 - `LOCAL_VISION_MIN_PIXELS` / `LOCAL_VISION_MAX_PIXELS`: Qwen processor image resizing bounds
 - `LOCAL_VISION_USE_FLASH_ATTENTION`: enable FlashAttention 2 on CUDA when installed
+- `LOCAL_VISION_VLLM_MAX_MODEL_LEN`: optional vLLM context length cap; use `none` to omit
+- `LOCAL_VISION_VLLM_MAX_NUM_SEQS`: vLLM maximum concurrent sequences
+- `LOCAL_VISION_VLLM_MAX_CONCURRENT_REQUESTS`: maximum `/analyze` requests admitted to vLLM at once
+- `LOCAL_VISION_VLLM_TENSOR_PARALLEL_SIZE`: vLLM tensor parallel size
 
 Legacy `QWEN_*` environment variables are still accepted as fallbacks.
 

@@ -19,6 +19,13 @@ def test_clamp_max_new_tokens_raises_low_values_to_one():
     assert settings.clamp_max_new_tokens(0) == 1
 
 
+def test_default_vllm_concurrency_settings_are_conservative():
+    settings = Settings()
+
+    assert settings.vllm_max_num_seqs == 8
+    assert settings.vllm_max_concurrent_requests == 8
+
+
 def test_local_vision_env_names_are_preferred(monkeypatch):
     get_settings.cache_clear()
     monkeypatch.setenv("QWEN_MODEL_ID", "legacy/model")
@@ -29,4 +36,32 @@ def test_local_vision_env_names_are_preferred(monkeypatch):
 
     assert settings.model_id == "local/model"
     assert settings.model_family == "auto"
+    get_settings.cache_clear()
+
+
+def test_vllm_settings_are_loaded(monkeypatch):
+    get_settings.cache_clear()
+    monkeypatch.setenv("LOCAL_VISION_BACKEND", "vllm")
+    monkeypatch.setenv("LOCAL_VISION_VLLM_MAX_MODEL_LEN", "8192")
+    monkeypatch.setenv("LOCAL_VISION_VLLM_MAX_NUM_SEQS", "2")
+    monkeypatch.setenv("LOCAL_VISION_VLLM_MAX_CONCURRENT_REQUESTS", "3")
+    monkeypatch.setenv("LOCAL_VISION_VLLM_TENSOR_PARALLEL_SIZE", "4")
+
+    settings = get_settings()
+
+    assert settings.backend == "vllm"
+    assert settings.vllm_max_model_len == 8192
+    assert settings.vllm_max_num_seqs == 2
+    assert settings.vllm_max_concurrent_requests == 3
+    assert settings.vllm_tensor_parallel_size == 4
+    get_settings.cache_clear()
+
+
+def test_vllm_max_model_len_can_be_disabled(monkeypatch):
+    get_settings.cache_clear()
+    monkeypatch.setenv("LOCAL_VISION_VLLM_MAX_MODEL_LEN", "none")
+
+    settings = get_settings()
+
+    assert settings.vllm_max_model_len is None
     get_settings.cache_clear()

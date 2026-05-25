@@ -46,6 +46,31 @@ def _get_int(names: tuple[str, ...], default: int, minimum: int | None = None) -
     return value
 
 
+def _get_optional_int(
+    names: tuple[str, ...],
+    default: int | None,
+    minimum: int | None = None,
+) -> int | None:
+    raw_value = _first_env(*names)
+    if raw_value is None:
+        return default
+
+    raw_value = raw_value.strip()
+    if raw_value == "":
+        return default
+    if raw_value.lower() in {"none", "null"}:
+        return None
+
+    try:
+        value = int(raw_value)
+    except ValueError as exc:
+        raise ValueError(f"{names[0]} must be an integer") from exc
+
+    if minimum is not None and value < minimum:
+        raise ValueError(f"{names[0]} must be >= {minimum}")
+    return value
+
+
 @dataclass(frozen=True)
 class Settings:
     """Runtime configuration loaded from environment variables."""
@@ -71,6 +96,11 @@ class Settings:
     processor_min_pixels: int | None = 256 * 28 * 28
     processor_max_pixels: int | None = 1280 * 28 * 28
     use_flash_attention: bool = False
+
+    vllm_max_model_len: int | None = 4096
+    vllm_max_num_seqs: int = 8
+    vllm_max_concurrent_requests: int = 8
+    vllm_tensor_parallel_size: int = 1
 
     log_level: str = "info"
 
@@ -115,6 +145,10 @@ def get_settings() -> Settings:
             "auto_image_text_to_text, auto_vision2seq"
         )
 
+    backend = _get_str(("LOCAL_VISION_BACKEND", "QWEN_BACKEND"), "transformers").strip().lower()
+    if backend not in {"transformers", "vllm"}:
+        raise ValueError("LOCAL_VISION_BACKEND must be one of: transformers, vllm")
+
     default_max_new_tokens = _get_int(("LOCAL_VISION_DEFAULT_MAX_NEW_TOKENS", "QWEN_DEFAULT_MAX_NEW_TOKENS"), 100, minimum=1)
     max_new_tokens_limit = _get_int(("LOCAL_VISION_MAX_NEW_TOKENS_LIMIT", "QWEN_MAX_NEW_TOKENS_LIMIT"), 256, minimum=1)
     if default_max_new_tokens > max_new_tokens_limit:
@@ -128,7 +162,7 @@ def get_settings() -> Settings:
         model_id=_get_str(("LOCAL_VISION_MODEL_ID", "QWEN_MODEL_ID"), "Qwen/Qwen2.5-VL-7B-Instruct"),
         model_family=model_family,
         auto_model_class=auto_model_class,
-        backend=_get_str(("LOCAL_VISION_BACKEND", "QWEN_BACKEND"), "transformers"),
+        backend=backend,
         device_policy=device_policy,
         load_model_on_startup=_get_bool(("LOCAL_VISION_LOAD_MODEL_ON_STARTUP", "QWEN_LOAD_MODEL_ON_STARTUP"), True),
         trust_remote_code=_get_bool(("LOCAL_VISION_TRUST_REMOTE_CODE", "QWEN_TRUST_REMOTE_CODE"), False),
@@ -139,5 +173,31 @@ def get_settings() -> Settings:
         processor_min_pixels=_get_int(("LOCAL_VISION_MIN_PIXELS", "QWEN_MIN_PIXELS"), 256 * 28 * 28, minimum=1),
         processor_max_pixels=_get_int(("LOCAL_VISION_MAX_PIXELS", "QWEN_MAX_PIXELS"), 1280 * 28 * 28, minimum=1),
         use_flash_attention=_get_bool(("LOCAL_VISION_USE_FLASH_ATTENTION", "QWEN_USE_FLASH_ATTENTION"), False),
+        vllm_max_model_len=_get_optional_int(
+            ("LOCAL_VISION_VLLM_MAX_MODEL_LEN", "QWEN_VLLM_MAX_MODEL_LEN"),
+            4096,
+            minimum=1,
+        ),
+        vllm_max_num_seqs=_get_int(
+            ("LOCAL_VISION_VLLM_MAX_NUM_SEQS", "QWEN_VLLM_MAX_NUM_SEQS"),
+            8,
+            minimum=1,
+        ),
+        vllm_max_concurrent_requests=_get_int(
+            (
+                "LOCAL_VISION_VLLM_MAX_CONCURRENT_REQUESTS",
+                "QWEN_VLLM_MAX_CONCURRENT_REQUESTS",
+            ),
+            8,
+            minimum=1,
+        ),
+        vllm_tensor_parallel_size=_get_int(
+            (
+                "LOCAL_VISION_VLLM_TENSOR_PARALLEL_SIZE",
+                "QWEN_VLLM_TENSOR_PARALLEL_SIZE",
+            ),
+            1,
+            minimum=1,
+        ),
         log_level=_get_str(("LOCAL_VISION_LOG_LEVEL", "QWEN_LOG_LEVEL"), "info"),
     )
