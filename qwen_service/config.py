@@ -130,6 +130,7 @@ class Settings:
     vllm_cpu_offload_gb: float = 0.0
     vllm_dtype: str | None = "auto"
     vllm_quantization: str | None = None
+    vllm_attention_backend: str | None = None
 
     log_level: str = "info"
 
@@ -250,6 +251,14 @@ def get_settings() -> Settings:
         ),
         vllm_quantization=_get_optional_str(
             ("LOCAL_VISION_VLLM_QUANTIZATION", "QWEN_VLLM_QUANTIZATION"),
+            None,
+        ),
+        vllm_attention_backend=_get_optional_str(
+            (
+                "LOCAL_VISION_VLLM_ATTENTION_BACKEND",
+                "QWEN_VLLM_ATTENTION_BACKEND",
+                "VLLM_ATTENTION_BACKEND",
+            ),
             None,
         ),
         log_level=_get_str(("LOCAL_VISION_LOG_LEVEL", "QWEN_LOG_LEVEL"), "info"),

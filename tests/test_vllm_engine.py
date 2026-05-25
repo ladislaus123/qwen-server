@@ -172,14 +172,20 @@ def test_vllm_engine_honors_cuda_device_policy(fake_vllm_modules):
 def test_vllm_engine_sets_target_device_before_import(monkeypatch, fake_vllm_modules):
     async def run():
         monkeypatch.delenv("VLLM_TARGET_DEVICE", raising=False)
+        monkeypatch.delenv("VLLM_ATTENTION_BACKEND", raising=False)
         engine = VllmVisionLanguageEngine(
-            Settings(backend="vllm", device_policy="cuda")
+            Settings(
+                backend="vllm",
+                device_policy="cuda",
+                vllm_attention_backend="XFORMERS",
+            )
         )
 
         await engine.load()
 
         assert fake_vllm_modules.engine_args.kwargs["device"] == "cuda"
         assert os.environ["VLLM_TARGET_DEVICE"] == "cuda"
+        assert os.environ["VLLM_ATTENTION_BACKEND"] == "XFORMERS"
 
         await engine.close()
 

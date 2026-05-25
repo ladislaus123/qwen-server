@@ -118,6 +118,12 @@ class VllmVisionLanguageEngine:
         engine_kwargs["device"] = policy
 
     def _configure_vllm_environment(self) -> None:
+        if self.settings.vllm_attention_backend is not None:
+            os.environ.setdefault(
+                "VLLM_ATTENTION_BACKEND",
+                self.settings.vllm_attention_backend,
+            )
+
         policy = self.settings.device_policy
         if policy == "auto":
             return
