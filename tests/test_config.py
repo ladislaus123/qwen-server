@@ -28,6 +28,7 @@ def test_default_vllm_concurrency_settings_are_conservative():
     assert settings.vllm_cpu_offload_gb == 0.0
     assert settings.vllm_attention_backend is None
     assert settings.vllm_use_flashinfer_sampler is None
+    assert settings.janus_dtype == "auto"
 
 
 def test_local_vision_env_names_are_preferred(monkeypatch):
@@ -80,4 +81,18 @@ def test_vllm_max_model_len_can_be_disabled(monkeypatch):
     settings = get_settings()
 
     assert settings.vllm_max_model_len is None
+    get_settings.cache_clear()
+
+
+def test_janus_settings_are_loaded(monkeypatch):
+    get_settings.cache_clear()
+    monkeypatch.setenv("LOCAL_VISION_MODEL_FAMILY", "janus")
+    monkeypatch.setenv("LOCAL_VISION_MODEL_ID", "deepseek-ai/Janus-Pro-1B")
+    monkeypatch.setenv("LOCAL_VISION_JANUS_DTYPE", "bfloat16")
+
+    settings = get_settings()
+
+    assert settings.model_family == "janus"
+    assert settings.model_id == "deepseek-ai/Janus-Pro-1B"
+    assert settings.janus_dtype == "bfloat16"
     get_settings.cache_clear()

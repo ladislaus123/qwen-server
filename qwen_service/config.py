@@ -132,6 +132,7 @@ class Settings:
     vllm_quantization: str | None = None
     vllm_attention_backend: str | None = None
     vllm_use_flashinfer_sampler: str | None = None
+    janus_dtype: str = "auto"
 
     log_level: str = "info"
 
@@ -163,8 +164,8 @@ def get_settings() -> Settings:
         raise ValueError("LOCAL_VISION_DEVICE must be one of: auto, cuda, mps, cpu")
 
     model_family = _get_str(("LOCAL_VISION_MODEL_FAMILY", "QWEN_MODEL_FAMILY"), "qwen2_5_vl").strip().lower()
-    if model_family not in {"qwen2_5_vl", "auto"}:
-        raise ValueError("LOCAL_VISION_MODEL_FAMILY must be one of: qwen2_5_vl, auto")
+    if model_family not in {"qwen2_5_vl", "auto", "janus"}:
+        raise ValueError("LOCAL_VISION_MODEL_FAMILY must be one of: qwen2_5_vl, auto, janus")
 
     auto_model_class = _get_str(
         ("LOCAL_VISION_AUTO_MODEL_CLASS", "QWEN_AUTO_MODEL_CLASS"),
@@ -179,6 +180,12 @@ def get_settings() -> Settings:
     backend = _get_str(("LOCAL_VISION_BACKEND", "QWEN_BACKEND"), "transformers").strip().lower()
     if backend not in {"transformers", "vllm"}:
         raise ValueError("LOCAL_VISION_BACKEND must be one of: transformers, vllm")
+
+    janus_dtype = _get_str(("LOCAL_VISION_JANUS_DTYPE",), "auto").strip().lower()
+    if janus_dtype not in {"auto", "bfloat16", "float16", "float32"}:
+        raise ValueError(
+            "LOCAL_VISION_JANUS_DTYPE must be one of: auto, bfloat16, float16, float32"
+        )
 
     default_max_new_tokens = _get_int(("LOCAL_VISION_DEFAULT_MAX_NEW_TOKENS", "QWEN_DEFAULT_MAX_NEW_TOKENS"), 100, minimum=1)
     max_new_tokens_limit = _get_int(("LOCAL_VISION_MAX_NEW_TOKENS_LIMIT", "QWEN_MAX_NEW_TOKENS_LIMIT"), 256, minimum=1)
@@ -270,5 +277,6 @@ def get_settings() -> Settings:
             ),
             None,
         ),
+        janus_dtype=janus_dtype,
         log_level=_get_str(("LOCAL_VISION_LOG_LEVEL", "QWEN_LOG_LEVEL"), "info"),
     )

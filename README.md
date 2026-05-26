@@ -103,6 +103,26 @@ The generic engine expects a chat-style vision-language model with a compatible
 `AutoProcessor`. Model families differ, so some Hugging Face models may still
 need a small model-specific engine.
 
+### Janus-Pro
+
+Janus uses DeepSeek's custom processor/model path rather than the generic Qwen
+or vLLM engines, so `LOCAL_VISION_TRUST_REMOTE_CODE=true` is required. Install
+the optional Janus package, then select the Janus provider:
+
+```bash
+pip install git+https://github.com/deepseek-ai/Janus.git
+
+LOCAL_VISION_BACKEND=transformers
+LOCAL_VISION_MODEL_FAMILY=janus
+LOCAL_VISION_MODEL_ID=deepseek-ai/Janus-Pro-1B
+LOCAL_VISION_TRUST_REMOTE_CODE=true
+LOCAL_VISION_JANUS_DTYPE=auto
+```
+
+The `/analyze` request and response shape stays unchanged. The initial Janus
+support is image understanding only; Janus text-to-image generation is not part
+of this service path.
+
 ## vLLM Backend
 
 The default backend is Transformers. To run the same `/analyze` route through
@@ -162,6 +182,9 @@ Then raise concurrency only after the model loads successfully.
 vLLM is loaded lazily by the vLLM backend, so the regular Transformers install
 and test suite do not require it.
 
+Janus is not wired through vLLM here. Keep `LOCAL_VISION_BACKEND=transformers`
+when `LOCAL_VISION_MODEL_FAMILY=janus`.
+
 ## Health Check
 
 ```bash
@@ -193,8 +216,9 @@ PY
 All configuration comes from environment variables or `.env`.
 
 - `LOCAL_VISION_MODEL_ID`: defaults to `Qwen/Qwen2.5-VL-7B-Instruct`
-- `LOCAL_VISION_MODEL_FAMILY`: `qwen2_5_vl` or `auto`
+- `LOCAL_VISION_MODEL_FAMILY`: `qwen2_5_vl`, `auto`, or `janus`
 - `LOCAL_VISION_AUTO_MODEL_CLASS`: `auto_image_text_to_text` or `auto_vision2seq`
+- `LOCAL_VISION_JANUS_DTYPE`: Janus dtype, `auto`, `bfloat16`, `float16`, or `float32`
 - `LOCAL_VISION_BACKEND`: `transformers` or `vllm`
 - `LOCAL_VISION_HOST`: defaults to `0.0.0.0`
 - `LOCAL_VISION_PORT`: defaults to `6000`

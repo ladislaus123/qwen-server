@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 class TransformersVisionLanguageEngine:
     """Runs chat-style Hugging Face vision-language models with Auto classes."""
 
+    supports_concurrent_generation = False
+
     def __init__(self, settings: Settings):
         self.settings = settings
         self.model_id = settings.model_id

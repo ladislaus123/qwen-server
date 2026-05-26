@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 class TransformersQwenEngine:
     """Runs Qwen2.5-VL with its model-specific Transformers class."""
 
+    supports_concurrent_generation = False
+
     def __init__(self, settings: Settings):
         self.settings = settings
         self.model_id = settings.model_id

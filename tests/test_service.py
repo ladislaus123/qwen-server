@@ -33,6 +33,7 @@ class BlockingFakeEngine:
     model_id = "fake-model"
     ready = True
     device = "test"
+    supports_concurrent_generation = False
 
     def __init__(self):
         self.active = 0
@@ -59,6 +60,10 @@ class BlockingFakeEngine:
             return "72.5"
         finally:
             self.active -= 1
+
+
+class ConcurrentBlockingFakeEngine(BlockingFakeEngine):
+    supports_concurrent_generation = True
 
 
 def _png_base64():
@@ -98,7 +103,7 @@ def test_service_raises_input_error_for_bad_image():
 
 def test_vllm_backend_allows_concurrent_analysis_requests():
     async def run():
-        engine = BlockingFakeEngine()
+        engine = ConcurrentBlockingFakeEngine()
         service = LocalVisionAnalyzeService(
             engine=engine,
             settings=Settings(backend="vllm"),

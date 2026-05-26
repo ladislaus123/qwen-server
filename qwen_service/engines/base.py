@@ -20,6 +20,10 @@ class VisionLanguageEngine(Protocol):
     def device(self) -> str | None:
         ...
 
+    @property
+    def supports_concurrent_generation(self) -> bool:
+        ...
+
     async def load(self) -> None:
         ...
 

@@ -87,10 +87,10 @@ class LocalVisionAnalyzeService:
             )
 
         try:
-            if self.settings.backend.lower() == "vllm":
+            if getattr(self.engine, "supports_concurrent_generation", False):
                 logger.info(
                     (
-                        "Analyze request %s using concurrent vLLM inference "
+                        "Analyze request %s using concurrent engine inference "
                         "engine_ready=%s device=%s"
                     ),
                     request_id,

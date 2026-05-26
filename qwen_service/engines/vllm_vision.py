@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 class VllmVisionLanguageEngine:
     """Runs chat-style vision-language models through vLLM."""
 
+    supports_concurrent_generation = True
+
     def __init__(self, settings: Settings):
         self.settings = settings
         self.model_id = settings.model_id

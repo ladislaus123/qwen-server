@@ -10,9 +10,7 @@ from fastapi import FastAPI
 from qwen_service import __version__
 from qwen_service.config import Settings, get_settings
 from qwen_service.engines.base import VisionLanguageEngine
-from qwen_service.engines.transformers_qwen import TransformersQwenEngine
-from qwen_service.engines.transformers_vision import TransformersVisionLanguageEngine
-from qwen_service.engines.vllm_vision import VllmVisionLanguageEngine
+from qwen_service.providers import create_engine
 from qwen_service.routes import router
 from qwen_service.service import LocalVisionAnalyzeService
 
@@ -21,17 +19,7 @@ logger = logging.getLogger(__name__)
 
 def create_default_engine(settings: Settings) -> VisionLanguageEngine:
     """Create the configured vision-language engine."""
-    backend = settings.backend.lower()
-    if backend == "vllm":
-        return VllmVisionLanguageEngine(settings)
-    if backend != "transformers":
-        raise ValueError(f"Unsupported backend: {settings.backend}")
-
-    if settings.model_family == "qwen2_5_vl":
-        return TransformersQwenEngine(settings)
-    if settings.model_family == "auto":
-        return TransformersVisionLanguageEngine(settings)
-    raise ValueError(f"Unsupported model family: {settings.model_family}")
+    return create_engine(settings)
 
 
 def create_app(
